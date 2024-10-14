@@ -106,10 +106,10 @@ ol.setLevel(logging.DEBUG)
 l.addHandler(ol)
 
 parser = argparse.ArgumentParser()
-parser.add_argument("attackn", help="specify the attack number", type=int, choices=range(1, 6))
-parser.add_argument("target", help="specify the hostname or IP of the target", type=str)
-parser.add_argument("port", help="target port", type=int)
-parser.add_argument('-P', '--process', type=int, default=2, help='Number of processes to spawn')
+parser.add_argument('-a', '--attack', type=int, choices=range(1, 6), help="specify the attack number")
+parser.add_argument('-t', '--target', type=str, required=True, help="specify the hostname or IP of the target")
+parser.add_argument('-p', '--port', type=int, default=443, help="target port")
+parser.add_argument('-P', '--process', type=int, default=1, help='Number of processes to spawn')
 parser.add_argument('-d', '--delay', type=float, default=0.1, help='Delay between requests (default: 0.1 seconds)')
 
 args = parser.parse_args()
@@ -128,7 +128,7 @@ def main():
     config = H2Configuration(logger=l) #enable log
     h2_conn = h2.connection.H2Connection(config=config)
 
-    attacks[args.attackn-1](tls_conn, h2_conn)
+    attacks[args.attack-1](tls_conn, h2_conn)
 
     # measure server timeout for closing the conn
     start = time.time()
