@@ -18,7 +18,7 @@ pip3 install h2
 
 ```
 Usage:
-    python slowrateDoSattackcompletePOSTheader.py --target <hostname> --port <port> --path <path> --process <number_of_processes> --delay <delay_time>
+    ./slowrateDoSattackcompletePOSTheader.py --target <hostname> --port <port> --path <path> --process <number_of_processes> --delay <delay_time>
 
 Arguments:
     -t, --target   : Target hostname or IP address (required)
