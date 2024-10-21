@@ -11,22 +11,19 @@ The tool measures the connection waiting time at the web server for the specifie
 You will need Python3 with the [Hyper-h2](https://python-hyper.org/h2/en/stable/index.html) dependency:
 
 ```
-apt install python3 python3-pip
 pip3 install h2
 ```
 
 ### Run
 
 ```
-$ ./slowh2attacks.py -h
-usage: slowh2attacks.py [-h] {1,2,3,4,5} target port
+Usage:
+    python slowrateDoSattackcompletePOSTheader.py --target <hostname> --port <port> --path <path> --process <number_of_processes> --delay <delay_time>
 
-positional arguments:
-  {1,2,3,4,5}  specify the attack number
-  target       specify the hostname or IP of the target
-  port         target port
+Arguments:
+    -t, --target   : Target hostname or IP address (required)
+    -p, --port     : Target port (default: 80)
+    --path         : Target path (default: "/")
+    -P, --process  : Number of attack processes to spawn (default: 1)
+    -d, --delay    : Delay between starting each process in seconds (default: 0.1)
 ```
-
-### Debug
-
-Instructions to capture the decrypted traffic can be found [here](https://sharkfesteurope.wireshark.org/assets/presentations17eu/15.pdf).
