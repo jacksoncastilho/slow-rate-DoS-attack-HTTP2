@@ -1,29 +1,13 @@
-# Slow Rate HTTP2 DoS PoC
+# Slow Rate DoS attack HTTP/2 PoC
 
 PoC of five Slow Rate HTTP/2 DoS attacks seen in the following research paper:
 
 [Nikhil Tripathi and Neminath Hubballi. Slow rate denial of service attacks against http/2 and detection. *Comput. Secur.*, 72(C):255–272, January 2018.](https://www.sciencedirect.com/science/article/pii/S0167404817301980)
 
-The tool measures the connection waiting time at the web server for the specified attack payload.
+## Disclaimer
 
-### Prerequisites
+This PoC is for educational and research purposes only. The authors are not responsible for any misuse of this code.
 
-You will need Python3 with the [Hyper-h2](https://python-hyper.org/h2/en/stable/index.html) dependency:
+## Credits
 
-```
-pip3 install h2
-```
-
-### Run
-
-```
-Usage:
-    ./slowrateDoSattackcompletePOSTheader.py --target <hostname> --port <port> --path <path> --process <number_of_processes> --delay <delay_time>
-
-Arguments:
-    -t, --target   : Target hostname or IP address (required)
-    -p, --port     : Target port (default: 80)
-    --path         : Target path (default: "/")
-    -P, --process  : Number of attack processes to spawn (default: 1)
-    -d, --delay    : Delay between starting each process in seconds (default: 0.1)
-```
+This project is based on the original work of [Dhiver](https://github.com/Dhiver/SlowRate-HTTP2-DoS).
