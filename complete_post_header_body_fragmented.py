@@ -86,7 +86,7 @@ if __name__ == "__main__":
     parser.add_argument('-d', '--delay', type=float, default=0.1, help="Delay between spawning processes in seconds (default: 0.1).")
     parser.add_argument('--chunk-size', type=int, default=10, help="Size of each data chunk sent (default: 10 bytes).")
     parser.add_argument('--chunk-delay', type=float, default=1, help="Delay between sending data chunks in seconds (default: 1s).")
-    parser.add_argument('--delay-before-request', type=bool, default=False, help="Set whether the delay will be before the first request (default: False).")
+    parser.add_argument('--delay-before-first-data-frame', type=bool, default=False, help="Set whether the delay will be before the first DATA frame (default: False).")
 
     args = parser.parse_args()
 
